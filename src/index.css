@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Karanlık tema varsayılan */
+:root {
+  color-scheme: dark;
+}
+
+/* Mobil optimizasyon - scroll önleme */
+html, body, #root {
+  height: 100%;
+  overscroll-behavior: none;
+  overflow-x: hidden;
+  background-color: #111827;
+  color: #f9fafb;
+}
+
+body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Dokunmatik optimizasyon */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Input alanları için seçimi etkinleştir */
+input, textarea {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(75, 85, 99, 0.5);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(75, 85, 99, 0.7);
+}
+
+/* Animasyon optimizasyonu */
+* {
+  will-change: auto;
+}
+
+.animate-bounce-slow {
+  animation: bounce 2s infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulse 3s infinite;
+}
+
+/* Focus states */
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #16a085;
+  outline-offset: 2px;
+}
+
+/* Prevent zoom on iOS */
+input[type="number"] {
+  font-size: 16px;
+}
+
+@media screen and (max-width: 768px) {
+  input[type="number"] {
+    font-size: 16px;
+    transform: scale(1);
+  }
+}
+
+/* Karanlık tema zorla */
+.dark {
+  color-scheme: dark;
+}
+
+/* Varsayılan karanlık tema */
+html {
+  @apply dark;
+}
