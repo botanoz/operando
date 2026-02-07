@@ -10,7 +10,6 @@ interface NumericPadProps {
   maxLength?: number;
 }
 
-// Sayısal klavye bileşeni - dokunmatik arayüz için optimize edilmiş
 export const NumericPad: React.FC<NumericPadProps> = ({
   value,
   onChange,
@@ -18,58 +17,41 @@ export const NumericPad: React.FC<NumericPadProps> = ({
   disabled = false,
   maxLength = 6
 }) => {
-  // Rakam tuşuna basma
   const handleNumberPress = (number: string) => {
     if (disabled || value.length >= maxLength) return;
-    
-    const newValue = value + number;
-    onChange(newValue);
+    onChange(value + number);
   };
 
-  // Silme işlemi
   const handleDelete = () => {
     if (disabled || value.length === 0) return;
-    
-    const newValue = value.slice(0, -1);
-    onChange(newValue);
+    onChange(value.slice(0, -1));
   };
 
-  // Tüm değeri temizle
   const handleClear = () => {
     if (disabled) return;
     onChange('');
   };
 
-  // Cevabı gönder
   const handleSubmit = () => {
     if (disabled || value.length === 0) return;
     onSubmit();
   };
 
-  // Tuş animasyon varyantları
-  const buttonVariants = {
-    tap: { scale: 0.95 },
-    hover: { scale: 1.05 }
-  };
+  const btnBase = `
+    rounded-xl font-bold text-lg
+    bg-gray-800 text-white border border-gray-600
+    active:scale-95 transition-all duration-100
+    disabled:opacity-40 disabled:cursor-not-allowed
+    flex items-center justify-center
+  `;
 
-  // Rakam tuşları (0-9)
   const renderNumberButton = (number: string) => (
     <motion.button
       key={number}
-      variants={buttonVariants}
-      whileTap="tap"
-      whileHover="hover"
+      whileTap={{ scale: 0.92 }}
       onClick={() => handleNumberPress(number)}
       disabled={disabled}
-      className={`
-        h-16 w-16 sm:h-18 sm:w-18 rounded-2xl font-bold text-xl sm:text-2xl
-        bg-white dark:bg-gray-800 text-gray-800 dark:text-white
-        border-2 border-gray-200 dark:border-gray-600
-        shadow-lg hover:shadow-xl transition-all duration-200
-        disabled:opacity-50 disabled:cursor-not-allowed
-        active:transform active:scale-95
-        ${!disabled ? 'hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900' : ''}
-      `}
+      className={`${btnBase} h-12`}
       aria-label={`Rakam ${number}`}
     >
       {number}
@@ -77,102 +59,70 @@ export const NumericPad: React.FC<NumericPadProps> = ({
   );
 
   return (
-    <div className="w-full max-w-sm mx-auto">
-      {/* Değer görüntüleme alanı */}
-      <div className="mb-6">
+    <div className="w-full">
+      {/* Value display */}
+      <div className="mb-2">
         <div className={`
-          h-16 px-6 rounded-2xl border-2 border-dashed
-          ${value.length > 0 
-            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900' 
-            : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800'
+          h-10 px-4 rounded-xl border-2 border-dashed
+          ${value.length > 0
+            ? 'border-primary-500 bg-primary-900/30'
+            : 'border-gray-600 bg-gray-800/50'
           }
-          flex items-center justify-center transition-all duration-200
+          flex items-center justify-center
         `}>
           <span className={`
-            text-2xl sm:text-3xl font-bold tracking-wider
-            ${value.length > 0 
-              ? 'text-primary-700 dark:text-primary-300' 
-              : 'text-gray-400 dark:text-gray-500'
-            }
+            text-xl font-bold tracking-wider
+            ${value.length > 0 ? 'text-primary-300' : 'text-gray-500'}
           `}>
             {value || '?'}
           </span>
         </div>
       </div>
 
-      {/* Rakam tuş takımı */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        {/* İlk sıra: 7, 8, 9 */}
-        {['7', '8', '9'].map(renderNumberButton)}
-        
-        {/* İkinci sıra: 4, 5, 6 */}
-        {['4', '5', '6'].map(renderNumberButton)}
-        
-        {/* Üçüncü sıra: 1, 2, 3 */}
-        {['1', '2', '3'].map(renderNumberButton)}
-        
-        {/* Son sıra: Temizle, 0, Sil */}
+      {/* Number grid */}
+      <div className="grid grid-cols-3 gap-1.5 mb-1.5">
+        {['7', '8', '9', '4', '5', '6', '1', '2', '3'].map(renderNumberButton)}
+
         <motion.button
-          variants={buttonVariants}
-          whileTap="tap"
-          whileHover="hover"
+          whileTap={{ scale: 0.92 }}
           onClick={handleClear}
           disabled={disabled || value.length === 0}
-          className={`
-            h-16 w-16 sm:h-18 sm:w-18 rounded-2xl font-bold text-lg
-            bg-warning text-white border-2 border-warning
-            shadow-lg hover:shadow-xl transition-all duration-200
-            disabled:opacity-50 disabled:cursor-not-allowed
-            active:transform active:scale-95
-          `}
+          className={`${btnBase} h-12 bg-yellow-900/60 border-yellow-700 text-yellow-400`}
           aria-label="Temizle"
         >
           C
         </motion.button>
-        
+
         {renderNumberButton('0')}
-        
+
         <motion.button
-          variants={buttonVariants}
-          whileTap="tap"
-          whileHover="hover"
+          whileTap={{ scale: 0.92 }}
           onClick={handleDelete}
           disabled={disabled || value.length === 0}
-          className={`
-            h-16 w-16 sm:h-18 sm:w-18 rounded-2xl font-bold
-            bg-danger text-white border-2 border-danger
-            shadow-lg hover:shadow-xl transition-all duration-200
-            disabled:opacity-50 disabled:cursor-not-allowed
-            active:transform active:scale-95
-            flex items-center justify-center
-          `}
-          aria-label="Son rakamı sil"
+          className={`${btnBase} h-12 bg-red-900/60 border-red-700 text-red-400`}
+          aria-label="Sil"
         >
-          <Delete size={20} />
+          <Delete size={18} />
         </motion.button>
       </div>
 
-      {/* Gönder butonu */}
+      {/* Submit button */}
       <motion.button
-        variants={buttonVariants}
-        whileTap="tap"
-        whileHover="hover"
+        whileTap={{ scale: 0.95 }}
         onClick={handleSubmit}
         disabled={disabled || value.length === 0}
         className={`
-          w-full h-16 rounded-2xl font-bold text-xl
+          w-full h-11 rounded-xl font-bold text-base
           bg-gradient-to-r from-primary-500 to-primary-600
-          text-white border-2 border-primary-500
-          shadow-lg hover:shadow-xl transition-all duration-200
-          disabled:opacity-50 disabled:cursor-not-allowed
-          disabled:from-gray-400 disabled:to-gray-500
-          active:transform active:scale-95
-          flex items-center justify-center gap-3
-          ${!disabled && value.length > 0 ? 'hover:from-primary-600 hover:to-primary-700' : ''}
+          text-white border border-primary-500
+          active:scale-95 transition-all duration-100
+          disabled:opacity-40 disabled:cursor-not-allowed
+          disabled:from-gray-600 disabled:to-gray-700
+          flex items-center justify-center gap-2
         `}
-        aria-label="Cevabı gönder"
+        aria-label="Cevabi gonder"
       >
-        <Check size={24} />
+        <Check size={20} />
         <span>Cevapla</span>
       </motion.button>
     </div>

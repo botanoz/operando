@@ -92,7 +92,7 @@ export class StorageService {
   /**
    * Varsayılan oyun istatistikleri
    */
-  private getDefaultGameStats(): GameStats {
+  getDefaultGameStats(): GameStats {
     return {
       totalGamesPlayed: 0,
       totalScore: 0,

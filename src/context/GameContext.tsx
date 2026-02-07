@@ -181,6 +181,7 @@ interface GameContextType {
   getGameStats: () => GameStats;
   incrementQuestionsAsked: () => void;
   resetCorrectInLevel: () => void;
+  resetStats: () => void;
 }
 
 // Context oluşturma
@@ -250,20 +251,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     dispatch({ type: 'GAME_OVER', payload: { finalScore, finalLevel } });
   }, []);
 
-  // Seviye 1'e sıfırla
+  // Oyun bitti - seviye sıfırlanmaz, en yüksek seviye korunur
   const resetToLevelOne = useCallback((mode: GameMode) => {
     console.log('🎮 resetToLevelOne çağrıldı:', mode);
     dispatch({ type: 'RESET_TO_LEVEL_ONE', payload: { mode } });
-    
-    const newStats: GameStats = {
-      ...gameStats,
-      currentLevels: {
-        ...gameStats.currentLevels,
-        [mode]: 1
-      }
-    };
-    setGameStats(newStats);
-  }, [gameStats]);
+    // currentLevels'ı sıfırlamıyoruz - oyuncu kaldığı seviyeden devam edecek
+  }, []);
 
   // Sonraki tura geç
   const nextRound = useCallback(() => {
@@ -319,7 +312,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       },
       currentLevels: {
         ...gameStats.currentLevels,
-        [sessionData.mode]: Math.max(gameStats.currentLevels[sessionData.mode] || 1, sessionData.currentLevel)
+        [sessionData.mode]: Math.max(gameStats.currentLevels[sessionData.mode] || 1, sessionData.maxLevel)
       },
       highestLevels: {
         ...gameStats.highestLevels,
@@ -397,6 +390,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return gameStats;
   }, [gameStats]);
 
+  // Tum istatistikleri sifirla
+  const resetStats = useCallback(() => {
+    const defaultStats = storageService.getDefaultGameStats();
+    setGameStats(defaultStats);
+    storageService.saveGameStats(defaultStats);
+  }, []);
+
   const contextValue: GameContextType = React.useMemo(() => ({
     gameSession,
     gameStats,
@@ -422,7 +422,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     getBestScore,
     getGameStats,
     incrementQuestionsAsked,
-    resetCorrectInLevel
+    resetCorrectInLevel,
+    resetStats
   }), [
     gameSession,
     gameStats,
@@ -448,7 +449,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     getBestScore,
     getGameStats,
     incrementQuestionsAsked,
-    resetCorrectInLevel
+    resetCorrectInLevel,
+    resetStats
   ]);
 
   return (
