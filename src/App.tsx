@@ -34,7 +34,7 @@ function App() {
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
               <Route path="/" element={<Home />} />
-              <Route path="/warm-up/:modeId" element={<WarmUp />} />
+              <Route path="/warmup/:modeId" element={<WarmUp />} />
               <Route path="/play/:modeId" element={<Play />} />
               <Route path="/tips" element={<Tips />} />
               <Route path="/result/:modeId" element={<Result />} />
