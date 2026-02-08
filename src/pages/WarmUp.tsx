@@ -115,7 +115,7 @@ export const WarmUp: React.FC = () => {
             <AlertTriangle size={18} className="text-red-400 mt-0.5 flex-shrink-0" />
             <div>
               <h4 className="text-sm font-semibold text-red-400">Yanlis Cevap</h4>
-              <p className="text-xs text-red-300/70">Oyun biter ama ilerlemeniz korunur!</p>
+              <p className="text-xs text-red-300/70">Seviyen 1 duser ama oyun devam eder!</p>
             </div>
           </div>
         </div>
@@ -170,7 +170,8 @@ export const WarmUp: React.FC = () => {
           <h2 className="text-xl font-bold text-gray-200">Harika! Hazirsın</h2>
           <p className="text-sm text-gray-400">{mode.name} modunda macerana basla!</p>
           <div className="p-3 bg-gray-700/50 rounded-xl text-xs text-gray-400 space-y-1">
-            <p>5 dogru = 1 seviye atlama</p>
+            <p>5 dogru = 1 seviye yukarı</p>
+            <p>1 yanlis = 1 seviye asagi</p>
             <p>Hizli ol, bonus sure kazan!</p>
           </div>
         </div>
