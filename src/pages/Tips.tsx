@@ -2,126 +2,20 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ChevronRight, ChevronLeft } from 'lucide-react';
-
-const tipCategories = [
-  {
-    id: 'addition',
-    name: 'Toplama',
-    symbol: '+',
-    color: 'from-green-500 to-emerald-600',
-    tips: [
-      {
-        title: "10'a Tamamlama",
-        example: '8 + 6 = ?',
-        steps: ["8'i 10'a tamamla: +2", "6'dan 2 ayir: 4 kalir", '10 + 4 = 14'],
-        visual: '8 + 6 → (8+2) + 4 → 10 + 4 = 14'
-      },
-      {
-        title: 'Sayilari Parcalama',
-        example: '47 + 35 = ?',
-        steps: ['40 + 30 = 70', '7 + 5 = 12', '70 + 12 = 82'],
-        visual: '47 + 35 → (40+30) + (7+5) = 82'
-      },
-      {
-        title: 'Cift Sayilari Toplama',
-        example: '7 + 7 = ?',
-        steps: ['Ayni sayilari carpma ile coz', '7 × 2 = 14'],
-        visual: '7 + 7 = 7 × 2 = 14'
-      }
-    ]
-  },
-  {
-    id: 'subtraction',
-    name: 'Cikarma',
-    symbol: '−',
-    color: 'from-blue-500 to-indigo-600',
-    tips: [
-      {
-        title: 'Yuvarla ve Duzelt',
-        example: '84 - 29 = ?',
-        steps: ["29'u 30'a yuvarla", '84 - 30 = 54', 'Fazla cikardik: 54 + 1 = 55'],
-        visual: '84 - 29 → 84 - 30 + 1 = 55'
-      },
-      {
-        title: 'Ekleyerek Fark Bulma',
-        example: '63 - 28 = ?',
-        steps: ['28 + ? = 63', '28 + 30 = 58, 58 + 5 = 63', 'Fark: 30 + 5 = 35'],
-        visual: '63 - 28 → 28 + 35 = 63 → Cevap: 35'
-      },
-      {
-        title: 'Basamak Basamak',
-        example: '156 - 78 = ?',
-        steps: ['156 - 70 = 86', '86 - 8 = 78'],
-        visual: '156 - 78 → 156 - 70 - 8 = 78'
-      }
-    ]
-  },
-  {
-    id: 'multiplication',
-    name: 'Carpma',
-    symbol: '×',
-    color: 'from-purple-500 to-pink-600',
-    tips: [
-      {
-        title: "9'lar Kurali",
-        example: '9 × 7 = ?',
-        steps: ['Ellerini ac, 7. parmagi buk', 'Sol: 6 parmak (onluk)', 'Sag: 3 parmak (birlik)', 'Sonuc: 63'],
-        visual: '9 × 7 → 6|3 = 63'
-      },
-      {
-        title: '5 ile Carpma',
-        example: '24 × 5 = ?',
-        steps: ['10 ile carp: 24 × 10 = 240', 'Yariya bol: 240 ÷ 2 = 120'],
-        visual: '24 × 5 → 240 ÷ 2 = 120'
-      },
-      {
-        title: "11'ler Kurali",
-        example: '23 × 11 = ?',
-        steps: ['Ilk rakam: 2', 'Rakamlari topla: 2+3 = 5', 'Son rakam: 3', 'Sonuc: 253'],
-        visual: '23 × 11 → 2_(2+3)_3 = 253'
-      }
-    ]
-  },
-  {
-    id: 'division',
-    name: 'Bolme',
-    symbol: '÷',
-    color: 'from-orange-500 to-red-600',
-    tips: [
-      {
-        title: 'Carpma ile Kontrol',
-        example: '84 ÷ 7 = ?',
-        steps: ['Tahmin: 12', 'Kontrol: 12 × 7 = 84', 'Dogru!'],
-        visual: '84 ÷ 7 = 12 → 12 × 7 = 84'
-      },
-      {
-        title: 'Faktorlere Ayirma',
-        example: '144 ÷ 12 = ?',
-        steps: ['12 = 4 × 3', '144 ÷ 4 = 36', '36 ÷ 3 = 12'],
-        visual: '144 ÷ 12 → 144 ÷ 4 ÷ 3 = 12'
-      },
-      {
-        title: 'Yariya Indirme',
-        example: '86 ÷ 2 = ?',
-        steps: ['80 ÷ 2 = 40', '6 ÷ 2 = 3', '40 + 3 = 43'],
-        visual: '86 ÷ 2 → (80+6) ÷ 2 = 43'
-      }
-    ]
-  }
-];
+import { TIP_CATEGORIES } from '../data/mathTips';
 
 export const Tips: React.FC = () => {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState(0);
   const [selectedTip, setSelectedTip] = useState(0);
 
-  const currentCategory = tipCategories[selectedCategory];
+  const currentCategory = TIP_CATEGORIES[selectedCategory];
   const currentTip = currentCategory.tips[selectedTip];
 
   const nextTip = () => {
     if (selectedTip < currentCategory.tips.length - 1) {
       setSelectedTip(selectedTip + 1);
-    } else if (selectedCategory < tipCategories.length - 1) {
+    } else if (selectedCategory < TIP_CATEGORIES.length - 1) {
       setSelectedCategory(selectedCategory + 1);
       setSelectedTip(0);
     }
@@ -132,12 +26,19 @@ export const Tips: React.FC = () => {
       setSelectedTip(selectedTip - 1);
     } else if (selectedCategory > 0) {
       setSelectedCategory(selectedCategory - 1);
-      setSelectedTip(tipCategories[selectedCategory - 1].tips.length - 1);
+      setSelectedTip(TIP_CATEGORIES[selectedCategory - 1].tips.length - 1);
     }
   };
 
   const isFirst = selectedCategory === 0 && selectedTip === 0;
-  const isLast = selectedCategory === tipCategories.length - 1 && selectedTip === currentCategory.tips.length - 1;
+  const isLast = selectedCategory === TIP_CATEGORIES.length - 1 && selectedTip === currentCategory.tips.length - 1;
+
+  const difficultyColor = {
+    easy: 'text-green-400 bg-green-900/30',
+    medium: 'text-yellow-400 bg-yellow-900/30',
+    hard: 'text-red-400 bg-red-900/30'
+  };
+  const difficultyLabel = { easy: 'Kolay', medium: 'Orta', hard: 'Zor' };
 
   return (
     <div className="flex flex-col h-[100dvh] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 overflow-hidden">
@@ -152,7 +53,7 @@ export const Tips: React.FC = () => {
             <ArrowLeft size={16} />
             Geri
           </motion.button>
-          <span className="text-sm text-gray-400">Ipuclari</span>
+          <span className="text-sm font-medium text-gray-300">Ipuclari</span>
           <div className="w-16" />
         </div>
       </header>
@@ -160,7 +61,7 @@ export const Tips: React.FC = () => {
       {/* Category tabs */}
       <div className="flex-shrink-0 px-4 pb-2">
         <div className="flex gap-2 max-w-lg mx-auto">
-          {tipCategories.map((cat, index) => (
+          {TIP_CATEGORIES.map((cat, index) => (
             <button
               key={cat.id}
               onClick={() => { setSelectedCategory(index); setSelectedTip(0); }}
@@ -189,13 +90,21 @@ export const Tips: React.FC = () => {
               transition={{ duration: 0.25 }}
               className="space-y-3"
             >
-              {/* Title + counter */}
+              {/* Title + counter + difficulty */}
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-gray-200">{currentTip.title}</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-gray-200">{currentTip.title}</h2>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${difficultyColor[currentTip.difficulty]}`}>
+                    {difficultyLabel[currentTip.difficulty]}
+                  </span>
+                </div>
                 <span className="text-xs text-gray-500">
                   {selectedTip + 1}/{currentCategory.tips.length}
                 </span>
               </div>
+
+              {/* Description */}
+              <p className="text-xs text-gray-400">{currentTip.description}</p>
 
               {/* Example */}
               <div className={`p-4 rounded-xl bg-gradient-to-br ${currentCategory.color} text-white`}>
@@ -218,12 +127,17 @@ export const Tips: React.FC = () => {
                 </div>
               </div>
 
-              {/* Visual */}
+              {/* Visual formula */}
               <div className="p-3 bg-gray-800/50 border border-gray-700 rounded-xl">
                 <div className="text-xs text-gray-500 mb-1">Formul</div>
                 <div className="text-sm font-mono text-primary-400 text-center">
                   {currentTip.visual}
                 </div>
+              </div>
+
+              {/* Level range info */}
+              <div className="text-center text-[10px] text-gray-600">
+                Seviye {currentTip.levelRange[0]} - {currentTip.levelRange[1]} arasi icin uygun
               </div>
             </motion.div>
           </AnimatePresence>

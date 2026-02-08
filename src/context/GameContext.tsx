@@ -30,6 +30,7 @@ type GameAction =
   | { type: 'LEVEL_UP'; payload: { newLevel: number } }
   | { type: 'GAME_OVER'; payload: { finalScore: number; finalLevel: number } }
   | { type: 'RESET_TO_LEVEL_ONE'; payload: { mode: GameMode } }
+  | { type: 'LEVEL_DOWN' }
   | { type: 'NEXT_ROUND' }
   | { type: 'END_GAME' }
   | { type: 'RESET_GAME' }
@@ -109,6 +110,13 @@ const gameReducer = (state: GameSession, action: GameAction): GameSession => {
         isActive: false
       };
 
+    case 'LEVEL_DOWN':
+      return {
+        ...state,
+        currentLevel: Math.max(1, state.currentLevel - 1),
+        correctInLevel: 0
+      };
+
     case 'NEXT_ROUND':
       return {
         ...state,
@@ -163,6 +171,7 @@ interface GameContextType {
   submitAnswer: (answer: UserAnswer) => void;
   updateScore: (points: number) => void;
   levelUp: (newLevel: number) => void;
+  levelDown: () => void;
   gameOver: (finalScore: number, finalLevel: number) => void;
   resetToLevelOne: (mode: GameMode) => void;
   nextRound: () => void;
@@ -244,6 +253,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     setGameStats(newStats);
   }, [gameSession.mode, gameStats]);
+
+  // Seviye dusurme (yanlis cevap)
+  const levelDown = useCallback(() => {
+    dispatch({ type: 'LEVEL_DOWN' });
+  }, []);
 
   // Oyun bitti (yanlış cevap)
   const gameOver = useCallback((finalScore: number, finalLevel: number) => {
@@ -405,6 +419,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     submitAnswer,
     updateScore,
     levelUp,
+    levelDown,
     gameOver,
     resetToLevelOne,
     nextRound,
@@ -432,6 +447,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     submitAnswer,
     updateScore,
     levelUp,
+    levelDown,
     gameOver,
     resetToLevelOne,
     nextRound,

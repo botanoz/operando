@@ -2,18 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft,
+  Home,
   Pause,
   Play as PlayIcon,
-  Home,
   CheckCircle,
   XCircle,
   Zap,
-  Trophy,
   TrendingUp,
-  AlertTriangle,
-  Timer,
-  RotateCcw
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { NumericPad } from '../components/NumericPad';
 import { TimerBar } from '../components/TimerBar';
@@ -22,6 +19,7 @@ import { useTimer } from '../hooks/useTimer';
 import { generateQuestion, calculateScore, getBonusTime, getOperationSymbol, shouldLevelUp, getLevelName } from '../utils/questionBank';
 import { Question, UserAnswer } from '../types';
 import { GAME_MODES, GAME_CONSTANTS } from '../config/gameConfig';
+import { getTipForLevel, MathTip } from '../data/mathTips';
 
 export const Play: React.FC = () => {
   const navigate = useNavigate();
@@ -34,7 +32,7 @@ export const Play: React.FC = () => {
     endGame,
     updateStats,
     levelUp,
-    resetToLevelOne,
+    levelDown,
     getCurrentLevel,
     addBonusTime
   } = useGame();
@@ -52,7 +50,9 @@ export const Play: React.FC = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [showFeedback, setShowFeedback] = useState<'correct' | 'wrong' | null>(null);
   const [showLevelUp, setShowLevelUp] = useState(false);
-  const [showGameOver, setShowGameOver] = useState(false);
+  const [showLevelDown, setShowLevelDown] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [levelUpTip, setLevelUpTip] = useState<MathTip | null>(null);
   const [bonusTimeNotification, setBonusTimeNotification] = useState(0);
   const [gameStartTime] = useState(Date.now());
 
@@ -97,8 +97,18 @@ export const Play: React.FC = () => {
       };
       fallbackQuestion.correctAnswer = fallbackQuestion.operand1 + fallbackQuestion.operand2;
       setCurrentQuestion(fallbackQuestion);
+      setUserAnswer('');
+      resetTimer(mode.timePerQuestion);
+      startTimer();
     }
   }, [mode, currentLevel, currentRound, resetTimer, startTimer]);
+
+  const continueGame = useCallback(() => {
+    setCurrentRound(prev => prev + 1);
+    setQuestionsAsked(prev => prev + 1);
+    nextRound();
+    generateNewQuestion();
+  }, [nextRound, generateNewQuestion]);
 
   const handleAnswerSubmit = useCallback((isTimeUp = false) => {
     if (!currentQuestion || showFeedback !== null || !mode) return;
@@ -153,43 +163,57 @@ export const Play: React.FC = () => {
     pauseTimer();
 
     if (!isCorrect) {
+      // Yanlis cevap: seviye dusur, oyun devam eder
       setTimeout(() => {
         setShowFeedback(null);
-        setShowGameOver(true);
-        resetToLevelOne(mode.id);
-        setTimeout(() => {
-          handleGameEnd();
-        }, 3000);
-      }, 1500);
+        const newLevel = Math.max(1, currentLevel - 1);
+        if (newLevel < currentLevel) {
+          setCurrentLevel(newLevel);
+          levelDown();
+          setShowLevelDown(true);
+          setCorrectInLevel(0);
+          setTimeout(() => {
+            setShowLevelDown(false);
+            continueGame();
+          }, 1500);
+        } else {
+          // Zaten seviye 1, sadece devam
+          setCorrectInLevel(0);
+          continueGame();
+        }
+      }, 1200);
       return;
     }
 
+    // Dogru cevap
     setTimeout(() => {
       setShowFeedback(null);
       const newCorrectInLevel = correctInLevel + 1;
       if (shouldLevelUp(newCorrectInLevel)) {
         const newLevel = currentLevel + 1;
-        setShowLevelUp(true);
         setCurrentLevel(newLevel);
         setMaxLevelReached(prev => Math.max(prev, newLevel));
         setCorrectInLevel(0);
         levelUp(newLevel);
-        setTimeout(() => {
-          setShowLevelUp(false);
-          continueGame();
-        }, 2500);
+        // Seviye gecisi: ipucu goster + devam/bitir
+        const tip = getTipForLevel(mode.id, newLevel);
+        setLevelUpTip(tip);
+        setShowLevelUp(true);
+        pauseTimer();
       } else {
         continueGame();
       }
-    }, 1500);
+    }, 1000);
   }, [
     currentQuestion, showFeedback, userAnswer, mode, timeRemaining,
     currentLevel, currentRound, correctInLevel, submitAnswer,
-    pauseTimer, addTime, addBonusTime, resetToLevelOne, levelUp
+    pauseTimer, addTime, addBonusTime, levelUp, levelDown, continueGame
   ]);
 
-  const handleGameEnd = useCallback(() => {
+  const handleFinishGame = useCallback(() => {
     if (!mode) return;
+    setShowLevelUp(false);
+    setShowExitConfirm(false);
     endGame();
     const sessionData = {
       mode: mode.id,
@@ -217,7 +241,7 @@ export const Play: React.FC = () => {
         finalLevel: maxLevelReached,
         questionsAsked,
         mode: mode.name,
-        wasGameOver: true
+        wasGameOver: false
       }
     });
   }, [
@@ -226,32 +250,28 @@ export const Play: React.FC = () => {
     questionsAsked, updateStats, navigate
   ]);
 
+  const handleContinueAfterLevelUp = useCallback(() => {
+    setShowLevelUp(false);
+    setLevelUpTip(null);
+    continueGame();
+  }, [continueGame]);
+
+  const handleExitRequest = useCallback(() => {
+    pauseTimer();
+    setIsPaused(true);
+    setShowExitConfirm(true);
+  }, [pauseTimer]);
+
+  const handleCancelExit = useCallback(() => {
+    setShowExitConfirm(false);
+    setIsPaused(false);
+    resumeTimer();
+  }, [resumeTimer]);
+
   const togglePause = useCallback(() => {
     if (isPaused) { resumeTimer(); setIsPaused(false); }
     else { pauseTimer(); setIsPaused(true); }
   }, [isPaused, resumeTimer, pauseTimer]);
-
-  const goHome = useCallback(() => { navigate('/'); }, [navigate]);
-
-  const restartGame = useCallback(() => {
-    if (!mode) return;
-    setCurrentQuestion(null);
-    setUserAnswer('');
-    setCurrentRound(1);
-    setScore(0);
-    setCorrectAnswers(0);
-    setWrongAnswers(0);
-    setCorrectInLevel(0);
-    setQuestionsAsked(0);
-    setShowFeedback(null);
-    setShowLevelUp(false);
-    setShowGameOver(false);
-    const savedLevel = getCurrentLevel(mode.id);
-    setCurrentLevel(savedLevel);
-    setMaxLevelReached(savedLevel);
-    startGame(mode.id, savedLevel);
-    setTimeout(() => { generateNewQuestion(); }, 100);
-  }, [mode, getCurrentLevel, startGame, generateNewQuestion]);
 
   useEffect(() => {
     if (mode) {
@@ -265,13 +285,6 @@ export const Play: React.FC = () => {
       }, 100);
     }
   }, [mode, getCurrentLevel, startGame]);
-
-  const continueGame = useCallback(() => {
-    setCurrentRound(prev => prev + 1);
-    setQuestionsAsked(prev => prev + 1);
-    nextRound();
-    generateNewQuestion();
-  }, [nextRound, generateNewQuestion]);
 
   if (!mode) {
     return (
@@ -288,38 +301,30 @@ export const Play: React.FC = () => {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 overflow-hidden">
-      {/* Header - compact */}
-      <header className="flex-shrink-0 px-3 py-2 border-b border-gray-700 bg-gray-800/90 backdrop-blur-sm">
-        <div className="flex items-center justify-between max-w-4xl mx-auto">
-          <div className="flex items-center gap-1.5">
-            <motion.button whileTap={{ scale: 0.95 }} onClick={goHome}
-              className="p-1.5 bg-gray-700 rounded-lg" aria-label="Ana Sayfa">
-              <Home size={18} className="text-gray-300" />
-            </motion.button>
-          </div>
+      {/* Header */}
+      <header className="flex-shrink-0 px-3 py-2 border-b border-gray-700 bg-gray-800/90">
+        <div className="flex items-center justify-between max-w-lg mx-auto">
+          <motion.button whileTap={{ scale: 0.95 }} onClick={handleExitRequest}
+            className="p-1.5 bg-gray-700 rounded-lg">
+            <Home size={18} className="text-gray-300" />
+          </motion.button>
           <div className="text-center">
             <h1 className="text-sm font-bold text-gray-200">{mode.name}</h1>
             <div className="flex items-center justify-center gap-1 text-xs text-gray-400">
               <TrendingUp size={12} />
-              <span>Seviye {currentLevel} - {getLevelName(currentLevel)}</span>
+              <span>Lv.{currentLevel} - {getLevelName(currentLevel)}</span>
             </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <motion.button whileTap={{ scale: 0.95 }} onClick={restartGame}
-              className="p-1.5 bg-blue-900 rounded-lg" aria-label="Yeniden Basla">
-              <RotateCcw size={18} className="text-blue-400" />
-            </motion.button>
-            <motion.button whileTap={{ scale: 0.95 }} onClick={togglePause}
-              className="p-1.5 bg-primary-900 rounded-lg" aria-label={isPaused ? "Devam Et" : "Duraklat"}>
-              {isPaused ? <PlayIcon size={18} className="text-primary-400" /> : <Pause size={18} className="text-primary-400" />}
-            </motion.button>
-          </div>
+          <motion.button whileTap={{ scale: 0.95 }} onClick={togglePause}
+            className="p-1.5 bg-gray-700 rounded-lg">
+            {isPaused ? <PlayIcon size={18} className="text-primary-400" /> : <Pause size={18} className="text-gray-300" />}
+          </motion.button>
         </div>
       </header>
 
-      {/* Stats row - compact */}
+      {/* Stats row */}
       <div className="flex-shrink-0 px-3 py-2">
-        <div className="grid grid-cols-4 gap-2 max-w-4xl mx-auto">
+        <div className="grid grid-cols-4 gap-2 max-w-lg mx-auto">
           <div className="p-1.5 text-center bg-gray-800 rounded-lg border border-gray-700">
             <div className="text-sm font-bold text-purple-400">Lv.{currentLevel}</div>
             <div className="w-full h-1 mt-1 bg-gray-700 rounded-full">
@@ -347,9 +352,9 @@ export const Play: React.FC = () => {
         </div>
       </div>
 
-      {/* Timer - compact */}
+      {/* Timer */}
       <div className="flex-shrink-0 px-3 py-1">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-lg mx-auto">
           <TimerBar
             timeRemaining={timeRemaining}
             totalTime={mode.timePerQuestion}
@@ -370,9 +375,9 @@ export const Play: React.FC = () => {
         </div>
       </div>
 
-      {/* Question card - flex grow to fill space */}
+      {/* Question card */}
       <div className="flex-1 flex flex-col justify-center px-3 py-2 min-h-0">
-        <div className="max-w-4xl mx-auto w-full">
+        <div className="max-w-lg mx-auto w-full">
           <AnimatePresence mode="wait">
             {currentQuestion && (
               <motion.div key={currentQuestion.id}
@@ -381,9 +386,9 @@ export const Play: React.FC = () => {
                 <div className={`
                   relative overflow-hidden rounded-2xl shadow-xl
                   bg-gradient-to-br ${mode.gradientFrom} ${mode.gradientTo}
-                  p-4 sm:p-6 text-white text-center flex flex-col justify-center
+                  p-5 text-white text-center
                 `}>
-                  <div className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-wide mb-1">
+                  <div className="text-3xl sm:text-4xl font-bold tracking-wide mb-1">
                     {currentQuestion.operand1} {getOperationSymbol(currentQuestion.operation)} {currentQuestion.operand2} = ?
                   </div>
                   <AnimatePresence>
@@ -406,7 +411,7 @@ export const Play: React.FC = () => {
                           <div className="text-center">
                             <XCircle size={48} className="mx-auto mb-2 text-red-400" />
                             <div className="text-xl font-bold">Yanlis!</div>
-                            <div className="text-sm">Dogru cevap: {currentQuestion.correctAnswer}</div>
+                            <div className="text-sm opacity-80">Cevap: {currentQuestion.correctAnswer}</div>
                           </div>
                         )}
                       </motion.div>
@@ -419,52 +424,126 @@ export const Play: React.FC = () => {
         </div>
       </div>
 
-      {/* Numeric pad - fixed at bottom */}
+      {/* Numeric pad */}
       <div className="flex-shrink-0 px-3 pb-3 pt-1">
         <div className="max-w-xs mx-auto">
           <NumericPad
             value={userAnswer}
             onChange={setUserAnswer}
             onSubmit={() => handleAnswerSubmit()}
-            disabled={isPaused || showFeedback !== null}
+            disabled={isPaused || showFeedback !== null || showLevelUp || showExitConfirm}
             maxLength={GAME_CONSTANTS.MAX_ANSWER_LENGTH}
           />
         </div>
       </div>
 
-      {/* Level up overlay */}
+      {/* Level Up overlay with tip + continue/finish */}
       <AnimatePresence>
         {showLevelUp && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} exit={{ scale: 0.5 }}
-              className="max-w-sm p-6 mx-4 text-center bg-gray-800 shadow-2xl rounded-2xl">
-              <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                className="flex items-center justify-center w-14 h-14 mx-auto mb-3 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500">
-                <Trophy className="text-white" size={28} />
-              </motion.div>
-              <h3 className="mb-1 text-xl font-bold text-gray-200">Seviye Atladin!</h3>
-              <p className="text-gray-400">Seviye {currentLevel} - {getLevelName(currentLevel)}</p>
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+            <motion.div initial={{ scale: 0.8, y: 30 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.8, y: 30 }}
+              className="max-w-sm w-full bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">
+              {/* Level up header */}
+              <div className={`p-4 bg-gradient-to-r ${mode.gradientFrom} ${mode.gradientTo} text-white text-center`}>
+                <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 0.6, repeat: 2 }}>
+                  <ChevronUp size={32} className="mx-auto mb-1" />
+                </motion.div>
+                <h3 className="text-lg font-bold">Seviye {currentLevel}!</h3>
+                <p className="text-sm opacity-80">{getLevelName(currentLevel)}</p>
+              </div>
+
+              {/* Tip section */}
+              {levelUpTip && (
+                <div className="p-4">
+                  <div className="text-xs text-gray-500 mb-2">Ipucu</div>
+                  <div className="p-3 bg-gray-700/50 rounded-xl mb-3">
+                    <h4 className="text-sm font-bold text-gray-200 mb-1">{levelUpTip.title}</h4>
+                    <div className="text-xs text-gray-400 mb-2">{levelUpTip.description}</div>
+                    <div className="p-2 bg-gray-800 rounded-lg text-center mb-2">
+                      <span className="text-sm font-mono text-primary-400">{levelUpTip.example}</span>
+                    </div>
+                    <div className="space-y-1">
+                      {levelUpTip.steps.map((step, i) => (
+                        <div key={i} className="flex items-start gap-2 text-xs text-gray-300">
+                          <span className="text-gray-500 flex-shrink-0">{i + 1}.</span>
+                          <span>{step}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-2 text-xs font-mono text-center text-green-400 bg-green-900/20 p-1.5 rounded">
+                      {levelUpTip.visual}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="flex gap-3 p-4 pt-0">
+                <motion.button whileTap={{ scale: 0.95 }} onClick={handleFinishGame}
+                  className="flex-1 py-3 bg-gray-700 border border-gray-600 rounded-xl text-sm font-medium text-gray-300">
+                  Bitir
+                </motion.button>
+                <motion.button whileTap={{ scale: 0.95 }} onClick={handleContinueAfterLevelUp}
+                  className={`flex-1 py-3 bg-gradient-to-r ${mode.gradientFrom} ${mode.gradientTo} rounded-xl text-sm font-bold text-white`}>
+                  Devam Et
+                </motion.button>
+              </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Game over overlay */}
+      {/* Level Down notification */}
       <AnimatePresence>
-        {showGameOver && (
+        {showLevelDown && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
             <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} exit={{ scale: 0.5 }}
-              className="max-w-sm p-6 mx-4 text-center bg-gray-800 shadow-2xl rounded-2xl">
-              <AlertTriangle className="mx-auto mb-3 text-red-500" size={48} />
-              <h3 className="mb-1 text-xl font-bold text-gray-200">Oyun Bitti!</h3>
-              <p className="mb-3 text-sm text-gray-400">Yanlis cevap! Seviye ilerlemeniz korundu.</p>
-              <div className="p-3 bg-gray-700 rounded-lg">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><div className="font-bold text-purple-400">{questionsAsked}</div><div className="text-gray-500 text-xs">Soru</div></div>
-                  <div><div className="font-bold text-green-400">{score.toLocaleString()}</div><div className="text-gray-500 text-xs">Puan</div></div>
+              className="max-w-xs p-5 text-center bg-gray-800 shadow-2xl rounded-2xl mx-4">
+              <ChevronDown size={36} className="mx-auto mb-2 text-red-400" />
+              <h3 className="text-lg font-bold text-gray-200 mb-1">Seviye Dustu!</h3>
+              <p className="text-sm text-gray-400">Seviye {currentLevel} - {getLevelName(currentLevel)}</p>
+              <p className="text-xs text-gray-500 mt-2">Devam et, tekrar yukseleceksin!</p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Exit confirmation */}
+      <AnimatePresence>
+        {showExitConfirm && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
+              className="max-w-sm w-full p-5 bg-gray-800 shadow-2xl rounded-2xl">
+              <h3 className="text-lg font-bold text-gray-200 text-center mb-2">Oyundan Cikmak Istiyor Musun?</h3>
+              <p className="text-sm text-gray-400 text-center mb-4">
+                Ilerlemeniz kaydedilecek.
+              </p>
+              <div className="p-3 bg-gray-700/50 rounded-xl mb-4 grid grid-cols-3 gap-2 text-center text-xs">
+                <div>
+                  <div className="font-bold text-purple-400">Lv.{maxLevelReached}</div>
+                  <div className="text-gray-500">Seviye</div>
                 </div>
+                <div>
+                  <div className="font-bold text-primary-400">{score.toLocaleString()}</div>
+                  <div className="text-gray-500">Puan</div>
+                </div>
+                <div>
+                  <div className="font-bold text-green-400">{correctAnswers}</div>
+                  <div className="text-gray-500">Dogru</div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <motion.button whileTap={{ scale: 0.95 }} onClick={handleCancelExit}
+                  className="flex-1 py-3 bg-gray-700 border border-gray-600 rounded-xl text-sm font-medium text-gray-300">
+                  Devam Et
+                </motion.button>
+                <motion.button whileTap={{ scale: 0.95 }} onClick={handleFinishGame}
+                  className="flex-1 py-3 bg-red-600 rounded-xl text-sm font-bold text-white">
+                  Cik
+                </motion.button>
               </div>
             </motion.div>
           </motion.div>
@@ -473,21 +552,21 @@ export const Play: React.FC = () => {
 
       {/* Pause overlay */}
       <AnimatePresence>
-        {isPaused && (
+        {isPaused && !showExitConfirm && !showLevelUp && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
             <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
-              className="p-6 text-center bg-gray-800 shadow-2xl rounded-2xl mx-4">
-              <Pause size={40} className="mx-auto mb-3 text-primary-500" />
-              <h3 className="mb-3 text-xl font-bold text-gray-200">Duraklatildi</h3>
+              className="max-w-sm w-full p-5 text-center bg-gray-800 shadow-2xl rounded-2xl">
+              <Pause size={36} className="mx-auto mb-3 text-gray-400" />
+              <h3 className="mb-4 text-lg font-bold text-gray-200">Duraklatildi</h3>
               <div className="flex justify-center gap-3">
                 <motion.button whileTap={{ scale: 0.95 }} onClick={togglePause}
-                  className="flex items-center gap-2 px-5 py-2.5 font-medium text-white bg-primary-500 rounded-xl">
+                  className={`flex items-center gap-2 px-5 py-2.5 font-medium text-white bg-gradient-to-r ${mode.gradientFrom} ${mode.gradientTo} rounded-xl`}>
                   <PlayIcon size={18} /> Devam
                 </motion.button>
-                <motion.button whileTap={{ scale: 0.95 }} onClick={goHome}
-                  className="flex items-center gap-2 px-5 py-2.5 font-medium text-white bg-gray-600 rounded-xl">
-                  <Home size={18} /> Ana Sayfa
+                <motion.button whileTap={{ scale: 0.95 }} onClick={handleExitRequest}
+                  className="flex items-center gap-2 px-5 py-2.5 font-medium text-gray-300 bg-gray-700 rounded-xl">
+                  <Home size={18} /> Cik
                 </motion.button>
               </div>
             </motion.div>
